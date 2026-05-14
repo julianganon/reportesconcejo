@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>Magdalena · Luminaria</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--ink:#0f1923;--ink2:#3a4a56;--ink3:#7a8a94;--paper:#f7f5f0;--rule:#ddd8ce;--lum:#e8a020;--lum-bg:#fdf6e8;--falt:#1a5fa8;--falt-bg:#eaf2fb;--green:#1a6e45;}
+html,body{height:100%;overflow:hidden;font-family:'Helvetica Neue',Arial,sans-serif;background:#fff;color:var(--ink);}
+.app{display:flex;flex-direction:column;height:100%;height:100dvh;}
+.header{background:var(--ink);color:#f7f5f0;padding:.7rem 1rem;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--lum);flex-shrink:0;}
+.h-title{font-size:14px;font-weight:500;}
+.h-sub{font-size:11px;color:rgba(247,245,240,.4);margin-top:1px;}
+.badge{background:var(--lum);color:var(--ink);border-radius:100px;padding:3px 10px;font-size:12px;font-weight:700;}
+.tabs{display:flex;background:#fff;border-bottom:2px solid var(--rule);flex-shrink:0;}
+.tab{flex:1;padding:.7rem;text-align:center;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink3);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;}
+.tab.on{color:var(--ink);border-bottom-color:var(--lum);}
+.panel{display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0;}
+.panel.on{display:flex;}
+#map{flex:1;min-height:0;width:100%;}
+.legend{padding:.5rem 1rem;background:var(--paper);border-bottom:1px solid var(--rule);display:flex;gap:1rem;flex-shrink:0;}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink2);}
+.leg-dot{width:10px;height:10px;border-radius:50%;}
+.toolbar{padding:.65rem 1rem;background:#fff;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.toolbar span{font-size:12px;color:var(--ink3);}
+.btn-csv{background:var(--green);color:#fff;border:none;padding:.45rem .875rem;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;}
+.list{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;}
+.item{padding:.875rem 1rem;border-bottom:1px solid var(--rule);cursor:pointer;}
+.item:active{background:var(--paper);}
+.item-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;gap:.5rem;}
+.item-num{font-size:10px;color:var(--ink3);font-family:monospace;}
+.cat{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:500;}
+.cat-lum{background:var(--lum-bg);color:#7a3a00;}
+.cat-falt{background:var(--falt-bg);color:#0d3570;}
+.item-desc{font-size:13px;color:var(--ink2);line-height:1.5;margin-bottom:.4rem;}
+.item-desc.vacio{color:var(--ink3);font-style:italic;}
+.item-foot{display:flex;align-items:center;justify-content:space-between;}
+.item-meta{font-size:11px;color:var(--ink3);}
+.links{display:flex;gap:.5rem;}
+.lnk{font-size:11px;color:var(--falt);text-decoration:none;padding:3px 8px;border:1px solid #b8d0ef;border-radius:4px;}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;}
+.overlay.on{display:block;}
+.sheet{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;padding:1rem 1.25rem 2.5rem;z-index:2001;max-height:75dvh;overflow-y:auto;transform:translateY(100%);transition:transform .25s ease;}
+.sheet.on{transform:translateY(0);}
+.handle{width:36px;height:4px;background:var(--rule);border-radius:2px;margin:0 auto .875rem;}
+.s-cat{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:.5rem;}
+.s-desc{font-size:15px;color:var(--ink2);line-height:1.6;margin-bottom:1rem;}
+.s-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem;}
+.s-cell{background:var(--paper);border-radius:8px;padding:.625rem .75rem;}
+.s-label{font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+.s-val{font-size:13px;color:var(--ink2);font-weight:500;}
+.s-actions{display:grid;grid-template-columns:1fr 1fr;gap:.625rem;}
+.s-btn{display:flex;align-items:center;justify-content:center;gap:.4rem;padding:.8rem;border-radius:10px;font-size:13px;font-weight:500;text-decoration:none;border:none;cursor:pointer;}
+.s-maps{background:var(--falt);color:#fff;}
+.s-sv{background:var(--paper);border:1px solid var(--rule);color:var(--ink2);}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div><div class="h-title">💡 Luminaria · Magdalena Reporta</div><div class="h-sub">EPA Magdalena · 14/05/2026</div></div>
+    <span class="badge">18</span>
+  </div>
+  <div class="tabs">
+    <div class="tab on" onclick="switchTab('mapa',this)">🗺 Mapa</div>
+    <div class="tab" onclick="switchTab('lista',this)">📋 Lista</div>
+  </div>
+
+  <div class="panel on" id="panel-mapa">
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:var(--lum)"></div>Sin funcionamiento (9)</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--falt)"></div>Falta luminaria (9)</div>
+    </div>
+    <div id="map"></div>
+  </div>
+
+  <div class="panel" id="panel-lista">
+    <div class="toolbar">
+      <span>18 reclamos · tocá para ver en mapa</span>
+      <button class="btn-csv" onclick="exportCSV()">↓ CSV</button>
+    </div>
+    <div class="list" id="lista"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="cerrar()"></div>
+<div class="sheet" id="sheet">
+  <div class="handle"></div>
+  <div class="s-cat" id="s-cat"></div>
+  <div class="s-desc" id="s-desc"></div>
+  <div class="s-grid">
+    <div class="s-cell"><div class="s-label">Fecha</div><div class="s-val" id="s-fecha"></div></div>
+    <div class="s-cell"><div class="s-label">Vecino</div><div class="s-val" id="s-nombre"></div></div>
+    <div class="s-cell" style="grid-column:1/-1"><div class="s-label">Coordenadas</div><div class="s-val" id="s-coords" style="font-family:monospace;font-size:12px;"></div></div>
+  </div>
+  <div class="s-actions">
+    <a class="s-btn s-maps" id="s-maps" href="#" target="_blank">📍 Google Maps</a>
+    <a class="s-btn s-sv"   id="s-sv"   href="#" target="_blank">🚶 Street View</a>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const R=[
+  {cat:"luminaria",desc:"Luminaria publica no funciona — 9 de julio esq. Miguens",lat:-35.0781336583933,lng:-57.513357803109116,fecha:"28/04/2026",nombre:"Javier Ganon"},
+  {cat:"luminaria",desc:"No tenemos buena luz en nuestra cuadra",lat:-35.087391556600906,lng:-57.5027713452377,fecha:"09/05/2026",nombre:"Ana González"},
+  {cat:"luminaria",desc:"Falta de iluminación en calle Reconquista entre Magdalena y San Julián (Bavio)",lat:-35.083691257888816,lng:-57.74848763650103,fecha:"25/04/2026",nombre:"Miguel Videla"},
+  {cat:"luminaria",desc:"Colocaron las luces el año pasado y se rompieron en menos de un mes. Hicimos el reclamo y no volvieron.",lat:-35.0769948,lng:-57.5032379,fecha:"23/04/2026",nombre:"Naza"},
+  {cat:"luminaria",desc:"(sin descripción)",lat:-35.06490939557006,lng:-57.51426839146008,fecha:"24/04/2026",nombre:"—"},
+  {cat:"luminaria",desc:"La luz hace semanas que no anda. Una boca de lobo.",lat:-35.080899083447946,lng:-57.51030564308167,fecha:"23/04/2026",nombre:"Antonela"},
+  {cat:"luminaria",desc:"No tenemos iluminación en nuestra manzana",lat:-35.0821521,lng:-57.4941765,fecha:"24/04/2026",nombre:"Micaela Borosuky"},
+  {cat:"luminaria",desc:"La calle es intransitable los días de lluvia. El zanjón acumula mosquitos, olores y ratas.",lat:-35.0744877,lng:-57.5296219,fecha:"10/05/2026",nombre:"Estefania Trepodi"},
+  {cat:"luminaria",desc:"Falta de luz en calle 109 Tormecan. Vienen, se llevan la lámpara, pasan meses, vuelven, se llevan el poste.",lat:-35.07061001228273,lng:-57.53510583235663,fecha:"28/04/2026",nombre:"Anto"},
+  {cat:"faltlum",desc:"Calles de barro y llenas de agua. No hay iluminaria.",lat:-35.07500722969832,lng:-57.53040075302125,fecha:"23/04/2026",nombre:"Agus"},
+  {cat:"faltlum",desc:"Luminaria apagada",lat:-35.06510379019083,lng:-57.539375543647125,fecha:"29/04/2026",nombre:"Carlos Barouille"},
+  {cat:"faltlum",desc:"La calle está toda poceada, no hay luminarias ni tampoco contenedores.",lat:-35.078552091827525,lng:-57.50464138000994,fecha:"23/04/2026",nombre:"Magali"},
+  {cat:"faltlum",desc:"Es una boca de lobo",lat:-35.2695492975905,lng:-57.57390832864986,fecha:"23/04/2026",nombre:"—"},
+  {cat:"faltlum",desc:"Falta luminaria en calle Dr. Illia, desde Las Carretas hasta Crl. Pringles.",lat:-35.08904500359438,lng:-57.50031352081351,fecha:"23/04/2026",nombre:"Marcelo"},
+  {cat:"faltlum",desc:"(sin descripción)",lat:-35.09137832683922,lng:-57.507714629173286,fecha:"23/04/2026",nombre:"—"},
+  {cat:"faltlum",desc:"Falta luminaria. Los vecinos tienen que prender sus propias luces para iluminar la calle.",lat:-35.08692707448354,lng:-57.50291237729359,fecha:"01/05/2026",nombre:"ActiveZone"},
+  {cat:"faltlum",desc:"No puedo ir al río porque no hay luces.",lat:-35.03428010980645,lng:-57.506861425728054,fecha:"23/04/2026",nombre:"Aníbal"},
+  {cat:"faltlum",desc:"Luminaria (reclamo del vecino)",lat:-35.07474954376924,lng:-57.51688241958618,fecha:"24/04/2026",nombre:"Cami"},
+];
+
+const map=L.map('map',{zoomControl:true}).setView([-35.082,-57.515],13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(map);
+
+function mkIcon(color,n){return L.divIcon({html:`<div style="background:${color};width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;">${n}</div>`,className:'',iconSize:[30,30],iconAnchor:[15,15]});}
+
+R.forEach((r,i)=>{
+  L.marker([r.lat,r.lng],{icon:mkIcon(r.cat==='luminaria'?'#e8a020':'#1a5fa8',i+1)})
+   .addTo(map).on('click',()=>abrirSheet(i));
+});
+
+document.getElementById('lista').innerHTML=R.map((r,i)=>`
+<div class="item" onclick="irMapa(${i})">
+  <div class="item-top">
+    <span class="item-num">#${String(i+1).padStart(2,'0')}</span>
+    <span class="cat ${r.cat==='luminaria'?'cat-lum':'cat-falt'}">${r.cat==='luminaria'?'💡 Sin funcionamiento':'🔦 Falta luminaria'}</span>
+  </div>
+  <div class="item-desc ${r.desc.startsWith('(sin')?'vacio':''}">${r.desc}</div>
+  <div class="item-foot">
+    <span class="item-meta">${r.fecha} · ${r.nombre}</span>
+    <div class="links">
+      <a class="lnk" href="https://www.google.com/maps?q=${r.lat},${r.lng}" target="_blank" onclick="event.stopPropagation()">📍</a>
+      <a class="lnk" href="https://www.google.com/maps?q=&layer=c&cbll=${r.lat},${r.lng}" target="_blank" onclick="event.stopPropagation()">🚶</a>
+    </div>
+  </div>
+</div>`).join('');
+
+function irMapa(i){
+  switchTab('mapa',document.querySelectorAll('.tab')[0]);
+  setTimeout(()=>{map.invalidateSize();map.setView([R[i].lat,R[i].lng],17);abrirSheet(i);},120);
+}
+
+function abrirSheet(i){
+  const r=R[i];
+  document.getElementById('s-cat').textContent=r.cat==='luminaria'?'💡 Luminaria sin funcionamiento':'🔦 Falta de luminaria';
+  document.getElementById('s-desc').textContent=r.desc;
+  document.getElementById('s-fecha').textContent=r.fecha;
+  document.getElementById('s-nombre').textContent=r.nombre;
+  document.getElementById('s-coords').textContent=`${r.lat.toFixed(6)}, ${r.lng.toFixed(6)}`;
+  document.getElementById('s-maps').href=`https://www.google.com/maps?q=${r.lat},${r.lng}`;
+  document.getElementById('s-sv').href=`https://www.google.com/maps?q=&layer=c&cbll=${r.lat},${r.lng}`;
+  document.getElementById('overlay').classList.add('on');
+  document.getElementById('sheet').classList.add('on');
+}
+
+function cerrar(){
+  document.getElementById('overlay').classList.remove('on');
+  document.getElementById('sheet').classList.remove('on');
+}
+
+function switchTab(id,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('panel-'+id).classList.add('on');
+  if(id==='mapa')setTimeout(()=>map.invalidateSize(),50);
+}
+
+function exportCSV(){
+  const h=['#','Tipo','Descripcion','Fecha','Vecino','Latitud','Longitud','Google Maps','Street View'];
+  const rows=R.map((r,i)=>[i+1,r.cat==='luminaria'?'Luminaria sin funcionamiento':'Falta de luminaria',`"${r.desc.replace(/"/g,'""')}"`,r.fecha,r.nombre,r.lat.toFixed(6),r.lng.toFixed(6),`https://www.google.com/maps?q=${r.lat},${r.lng}`,`https://www.google.com/maps?q=&layer=c&cbll=${r.lat},${r.lng}`].join(','));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+[h.join(','),...rows].join('\n')],{type:'text/csv;charset=utf-8'}));
+  a.download='magdalena_luminaria_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+</script>
+</body>
+</html>
